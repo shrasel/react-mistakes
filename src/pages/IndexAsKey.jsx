@@ -177,13 +177,6 @@ const GoodImplementation = () => {
     };
     setItems(prev => [...prev, newItem]);
   };
-      text: `Task ${newId}`,
-      color: ['bg-red-100', 'bg-blue-100', 'bg-green-100', 'bg-yellow-100'][
-        Math.floor(Math.random() * 4)
-      ],
-    };
-    setItems(prev => [...prev, newItem]);
-  };
 
   const handleInputChange = (id, value) => {
     setInputValues(prev => ({ ...prev, [id]: value }));

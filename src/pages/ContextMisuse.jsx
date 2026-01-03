@@ -34,13 +34,20 @@ const BadGlobalProvider = ({ children }) => {
 const BadUserProfile = () => {
   const { user } = useContext(BadGlobalContext);
   const [renderCount, setRenderCount] = useState(0);
+  const [lastRenderTime, setLastRenderTime] = useState(Date.now());
 
   useEffect(() => {
     setRenderCount(prev => prev + 1);
+    setLastRenderTime(Date.now());
   });
 
+  const isRecentRender = Date.now() - lastRenderTime < 200;
+
   return (
-    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 relative">
+      {isRecentRender && (
+        <div className="absolute inset-0 bg-red-200/30 rounded-lg animate-pulse pointer-events-none" />
+      )}
       <h3 className="text-lg font-bold text-red-800 mb-3">
         👤 User Profile Component
       </h3>
@@ -60,6 +67,15 @@ const BadUserProfile = () => {
             This component only needs user data (which never changes),
             but it re-renders every second because currentTime is in the same context!
           </p>
+          <div className="mt-2 h-2 bg-red-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-red-500 transition-all duration-200"
+              style={{ width: `${Math.min((renderCount / 60) * 100, 100)}%` }}
+            />
+          </div>
+          <p className="text-xs text-red-600 mt-1 font-semibold">
+            Wasted renders: {renderCount - 1} / 60
+          </p>
         </div>
       </div>
     </div>
@@ -70,9 +86,13 @@ const BadUserProfile = () => {
 const BadClockDisplay = () => {
   const { currentTime } = useContext(BadGlobalContext);
   const [renderCount, setRenderCount] = useState(0);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     setRenderCount(prev => prev + 1);
+    setIsUpdating(true);
+    const timer = setTimeout(() => setIsUpdating(false), 200);
+    return () => clearTimeout(timer);
   });
 
   return (
@@ -80,7 +100,9 @@ const BadClockDisplay = () => {
       <h3 className="text-lg font-bold text-yellow-800 mb-3">
         🕐 Clock Component
       </h3>
-      <div className="text-3xl font-mono font-bold text-yellow-900 mb-4">
+      <div className={`text-3xl font-mono font-bold text-yellow-900 mb-4 transition-all ${
+        isUpdating ? 'scale-105 text-yellow-600' : ''
+      }`}>
         {currentTime}
       </div>
       <div className="p-3 bg-yellow-100 rounded">
@@ -169,8 +191,15 @@ const GoodUserProfile = () => {
     setRenderCount(prev => prev + 1);
   });
 
+  const isStable = renderCount <= 1;
+
   return (
-    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6">
+    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6 relative">
+      {isStable && (
+        <div className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+          🛡️ Stable
+        </div>
+      )}
       <h3 className="text-lg font-bold text-green-800 mb-3">
         👤 User Profile Component
       </h3>
@@ -190,6 +219,12 @@ const GoodUserProfile = () => {
             This component only subscribes to UserContext, so it only renders once!
             The time updates don't affect it at all.
           </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-2 bg-green-200 rounded-full flex-1">
+              <div className="h-full bg-green-500 rounded-full" style={{ width: '100%' }} />
+            </div>
+            <span className="text-xs text-green-700 font-semibold">✅ Optimal</span>
+          </div>
         </div>
       </div>
     </div>

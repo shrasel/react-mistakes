@@ -26,6 +26,7 @@ const BadImplementation = () => {
   const [category, setCategory] = useState('ALL');
   const [renderCount, setRenderCount] = useState(0);
   const [unrelatedState, setUnrelatedState] = useState(0);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   React.useEffect(() => {
     setRenderCount(prev => prev + 1);
@@ -33,6 +34,12 @@ const BadImplementation = () => {
 
   // ❌ BAD: This expensive calculation runs on EVERY render
   // Even when unrelatedState changes (which has nothing to do with the list)
+  React.useEffect(() => {
+    setIsCalculating(true);
+    const timer = setTimeout(() => setIsCalculating(false), 100);
+    return () => clearTimeout(timer);
+  }, [renderCount]);
+
   const startTime = performance.now();
   
   const filteredItems = ITEMS.filter(item => {
@@ -45,7 +52,12 @@ const BadImplementation = () => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+      <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 relative">
+        {isCalculating && (
+          <div className="absolute top-2 right-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+            🔄 Calculating...
+          </div>
+        )}
         <h3 className="text-xl font-bold text-red-800 mb-4">
           ❌ Bad Implementation: Fearing Re-renders
         </h3>
@@ -99,14 +111,17 @@ const BadImplementation = () => {
             <div>
               <div className="text-2xl font-bold text-red-800">{renderCount}</div>
               <div className="text-xs text-red-700">Total Renders</div>
+              <div className="text-xs text-red-600 font-semibold mt-1">= Calculations 😱</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-red-800">{calculationTime}ms</div>
               <div className="text-xs text-red-700">Last Calculation</div>
+              <div className="text-xs text-red-600 font-semibold mt-1">Every Time!</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-red-800">{filteredItems.length}</div>
               <div className="text-xs text-red-700">Filtered Items</div>
+              <div className="text-xs text-red-600 font-semibold mt-1">of 5,000 total</div>
             </div>
           </div>
         </div>
@@ -160,6 +175,8 @@ const GoodImplementation = () => {
   const [renderCount, setRenderCount] = useState(0);
   const [unrelatedState, setUnrelatedState] = useState(0);
   const [calculationCount, setCalculationCount] = useState(0);
+  const [lastCalculationTime, setLastCalculationTime] = useState(0);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   React.useEffect(() => {
     setRenderCount(prev => prev + 1);
@@ -168,6 +185,7 @@ const GoodImplementation = () => {
   // ✅ GOOD: Memoize the expensive calculation
   // This only recalculates when filter or category changes
   const filteredItems = useMemo(() => {
+    setIsCalculating(true);
     const startTime = performance.now();
     setCalculationCount(prev => prev + 1);
     
@@ -177,15 +195,21 @@ const GoodImplementation = () => {
       return matchesFilter && matchesCategory;
     }).sort((a, b) => b.value - a.value);
     
-    const calculationTime = (performance.now() - startTime).toFixed(2);
-    console.log(`Filtered and sorted ${ITEMS.length} items in ${calculationTime}ms`);
+    const calculationTime = performance.now() - startTime;
+    setLastCalculationTime(calculationTime.toFixed(2));
+    setTimeout(() => setIsCalculating(false), 100);
     
     return result;
   }, [filter, category]); // Only recalculate when these dependencies change
 
   return (
     <div className="space-y-4">
-      <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6">
+      <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6 relative">
+        {isCalculating && (
+          <div className="absolute top-2 right-2 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full animate-pulse">
+            🔄 Calculating (memoized)...
+          </div>
+        )}
         <h3 className="text-xl font-bold text-green-800 mb-4">
           ✅ Good Implementation: useMemo for Expensive Calculations
         </h3>
@@ -235,18 +259,26 @@ const GoodImplementation = () => {
         </div>
 
         <div className="bg-green-100 p-4 rounded-lg mb-4">
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-green-800">{renderCount}</div>
               <div className="text-xs text-green-700">Total Renders</div>
+              <div className="text-xs text-green-600 font-semibold mt-1">No problem! ✅</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-800">{calculationCount}</div>
               <div className="text-xs text-green-700">Calculations</div>
+              <div className="text-xs text-green-600 font-semibold mt-1">Only when needed!</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-800">{lastCalculationTime}ms</div>
+              <div className="text-xs text-green-700">Last Calc Time</div>
+              <div className="text-xs text-green-600 font-semibold mt-1">Cached result</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-800">{filteredItems.length}</div>
               <div className="text-xs text-green-700">Filtered Items</div>
+              <div className="text-xs text-green-600 font-semibold mt-1">of 5,000 total</div>
             </div>
           </div>
         </div>

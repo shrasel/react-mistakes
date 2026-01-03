@@ -13,6 +13,7 @@ const BadUserCard = ({ firstName, lastName, email }) => {
   const [fullName, setFullName] = useState('');
   const [renderCount, setRenderCount] = useState(0);
   const [effectRunCount, setEffectRunCount] = useState(0);
+  const [isFlashing, setIsFlashing] = useState(false);
 
   // Track renders
   useEffect(() => {
@@ -21,15 +22,21 @@ const BadUserCard = ({ firstName, lastName, email }) => {
 
   // ❌ BAD: Using useEffect to calculate a derived value
   // This causes TWO renders every time firstName or lastName changes:
-  // 1. Initial render with old fullName
+  // 1. Initial render with old fullName (FLASH!)
   // 2. Effect runs and updates fullName, triggering another render
   useEffect(() => {
+    setIsFlashing(true);
     setFullName(`${firstName} ${lastName}`);
     setEffectRunCount(prev => prev + 1);
+    const timer = setTimeout(() => setIsFlashing(false), 300);
+    return () => clearTimeout(timer);
   }, [firstName, lastName]);
 
   return (
-    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 relative">
+      {isFlashing && (
+        <div className="absolute inset-0 bg-yellow-300/50 rounded-lg animate-pulse pointer-events-none" />
+      )}
       <h3 className="text-xl font-bold text-red-800 mb-4">
         👤 User Card (Bad Version)
       </h3>
@@ -37,7 +44,16 @@ const BadUserCard = ({ firstName, lastName, email }) => {
       <div className="space-y-3 mb-4">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-gray-700 w-24">Full Name:</span>
-          <span className="text-lg font-bold text-gray-900">{fullName}</span>
+          <span className={`text-lg font-bold text-gray-900 transition-all ${
+            isFlashing ? 'text-red-600' : ''
+          }`}>
+            {fullName || '(empty - waiting for effect...)'}
+          </span>
+          {isFlashing && (
+            <span className="text-xs bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full font-bold animate-pulse">
+              ⚡ Syncing...
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-gray-700 w-24">Email:</span>
@@ -50,17 +66,24 @@ const BadUserCard = ({ firstName, lastName, email }) => {
           <div>
             <div className="text-2xl font-bold text-red-800">{renderCount}</div>
             <div className="text-xs text-red-700">Render Count</div>
+            <div className="text-xs text-red-600 font-semibold mt-1">😱 Extra renders!</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-red-800">{effectRunCount}</div>
             <div className="text-xs text-red-700">Effect Runs</div>
+            <div className="text-xs text-red-600 font-semibold mt-1">Each triggers render</div>
           </div>
         </div>
-        <p className="text-xs text-red-800">
-          <strong>⚠️ Problem:</strong> Notice how the render count is higher than the effect count?
-          That's because of the "flash" - the component renders with empty fullName first,
-          then the effect runs and triggers another render with the correct value.
+        <p className="text-xs text-red-800 mb-2">
+          <strong>⚠️ Problem:</strong> Notice render count is higher than effect count?
+          That's the "flash" - component renders with stale fullName first,
+          then effect runs and triggers another render with correct value.
         </p>
+        <div className="bg-red-200 px-3 py-2 rounded mt-2">
+          <p className="text-xs text-red-900 font-semibold">
+            💡 Try typing quickly to see the lag and flash effect!
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -136,18 +159,27 @@ const BadImplementation = () => {
 // ✅ GOOD: Calculate derived value directly during render
 const GoodUserCard = ({ firstName, lastName, email }) => {
   const [renderCount, setRenderCount] = useState(0);
+  const [lastRenderTime, setLastRenderTime] = useState(Date.now());
 
   // Track renders
   useEffect(() => {
     setRenderCount(prev => prev + 1);
+    setLastRenderTime(Date.now());
   });
 
   // ✅ GOOD: Calculate derived value directly
   // No useState, no useEffect needed!
   const fullName = `${firstName} ${lastName}`;
 
+  const isRecentRender = Date.now() - lastRenderTime < 200;
+
   return (
-    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6">
+    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-6 relative">
+      {isRecentRender && (
+        <div className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+          ✅ Instant!
+        </div>
+      )}
       <h3 className="text-xl font-bold text-green-800 mb-4">
         👤 User Card (Good Version)
       </h3>
@@ -167,12 +199,18 @@ const GoodUserCard = ({ firstName, lastName, email }) => {
         <div className="text-center mb-3">
           <div className="text-2xl font-bold text-green-800">{renderCount}</div>
           <div className="text-xs text-green-700">Render Count</div>
+          <div className="text-xs text-green-600 font-semibold mt-1">✅ One render per change!</div>
         </div>
-        <p className="text-xs text-green-800">
+        <p className="text-xs text-green-800 mb-2">
           <strong>✅ Perfect:</strong> The component only renders once per prop change.
           No extra renders, no useEffect complexity, and the value is always correct
           immediately.
         </p>
+        <div className="bg-green-200 px-3 py-2 rounded mt-2">
+          <p className="text-xs text-green-900 font-semibold">
+            🚀 Type quickly - notice how smooth it is!
+          </p>
+        </div>
       </div>
     </div>
   );

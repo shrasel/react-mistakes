@@ -11,14 +11,27 @@ import KeyTakeaway from '../components/KeyTakeaway';
 
 // Simulate an expensive component that takes time to render
 const ExpensiveComponent = memo(({ renderCount }) => {
+  const [isRendering, setIsRendering] = useState(false);
+  
   // Simulate expensive computation (BAD: this shouldn't be necessary!)
+  React.useEffect(() => {
+    setIsRendering(true);
+    const timer = setTimeout(() => setIsRendering(false), 150);
+    return () => clearTimeout(timer);
+  }, [renderCount]);
+
   let startTime = performance.now();
   while (performance.now() - startTime < 100) {
     // Artificial delay - simulates slow component
   }
 
   return (
-    <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
+    <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl relative overflow-hidden">
+      {isRendering && (
+        <div className="absolute inset-0 bg-amber-200/50 animate-pulse flex items-center justify-center">
+          <span className="text-amber-900 font-bold">⏳ Rendering...</span>
+        </div>
+      )}
       <h3 className="text-lg font-semibold text-amber-900 mb-2">
         💤 Slow Component (wrapped in memo)
       </h3>
@@ -38,19 +51,42 @@ ExpensiveComponent.displayName = 'ExpensiveComponent';
 const BadImplementation = () => {
   const [inputValue, setInputValue] = useState('');
   const [renderCount, setRenderCount] = useState(0);
+  const [lastRenderTime, setLastRenderTime] = useState(0);
 
   // This runs on every render, including when typing
   React.useEffect(() => {
+    const now = Date.now();
+    if (renderCount > 0) {
+      setLastRenderTime(now);
+    }
     setRenderCount(prev => prev + 1);
   });
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-rose-200 rounded-xl p-6">
+      <div className="bg-white border border-rose-200 rounded-xl p-6 relative">
+        {lastRenderTime > 0 && Date.now() - lastRenderTime < 200 && (
+          <div className="absolute top-2 right-2 px-3 py-1 bg-rose-500 text-white text-xs font-bold rounded-full animate-pulse">
+            🔄 Parent Re-rendering
+          </div>
+        )}
         <h3 className="text-xl font-bold text-rose-900 mb-4 flex items-center gap-2">
           <span>❌</span> Bad Implementation: memo as a Band-Aid
         </h3>
         
+        <div className="bg-rose-100 border border-rose-200 p-4 rounded-lg mb-4">
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <div className="text-3xl font-bold text-rose-800">{renderCount}</div>
+              <div className="text-xs text-rose-700">Parent Renders</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-rose-800">{inputValue.length}</div>
+              <div className="text-xs text-rose-700">Characters Typed</div>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -114,6 +150,14 @@ const InputComponent = () => {
 };
 
 const SlowComponentWithoutMemo = ({ renderCount }) => {
+  const [isRendering, setIsRendering] = useState(false);
+  
+  React.useEffect(() => {
+    setIsRendering(true);
+    const timer = setTimeout(() => setIsRendering(false), 150);
+    return () => clearTimeout(timer);
+  }, [renderCount]);
+
   // Same expensive computation, but no memo needed!
   let startTime = performance.now();
   while (performance.now() - startTime < 100) {
@@ -121,7 +165,12 @@ const SlowComponentWithoutMemo = ({ renderCount }) => {
   }
 
   return (
-    <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-xl">
+    <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-xl relative overflow-hidden">
+      {isRendering && (
+        <div className="absolute inset-0 bg-emerald-200/50 animate-pulse flex items-center justify-center">
+          <span className="text-emerald-900 font-bold">⏳ Rendering...</span>
+        </div>
+      )}
       <h3 className="text-lg font-semibold text-emerald-900 mb-2">
         💤 Slow Component (NO memo needed!)
       </h3>

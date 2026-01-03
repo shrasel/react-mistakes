@@ -16,9 +16,9 @@ const generateId = () => nextId++;
 // ❌ BAD: Using index as key
 const BadImplementation = () => {
   const [items, setItems] = useState([
-    { id: 1, text: 'Task 1', color: 'bg-red-100' },
-    { id: 2, text: 'Task 2', color: 'bg-blue-100' },
-    { id: 3, text: 'Task 3', color: 'bg-green-100' },
+    { id: 1, text: 'Task 1', color: 'bg-red-100', completed: false },
+    { id: 2, text: 'Task 2', color: 'bg-blue-100', completed: false },
+    { id: 3, text: 'Task 3', color: 'bg-green-100', completed: false },
   ]);
 
   const [inputValues, setInputValues] = useState({});
@@ -34,12 +34,19 @@ const BadImplementation = () => {
       color: ['bg-red-100', 'bg-blue-100', 'bg-green-100', 'bg-yellow-100'][
         Math.floor(Math.random() * 4)
       ],
+      completed: false,
     };
     setItems(prev => [...prev, newItem]);
   };
 
   const handleInputChange = (index, value) => {
     setInputValues(prev => ({ ...prev, [index]: value }));
+  };
+
+  const toggleComplete = (index) => {
+    setItems(prev => prev.map((item, i) => 
+      i === index ? { ...item, completed: !item.completed } : item
+    ));
   };
 
   return (
@@ -55,17 +62,18 @@ const BadImplementation = () => {
             When you delete an item, React gets confused about which component is which.
           </p>
           <p className="text-sm text-red-800 mb-2">
-            <strong>Try this:</strong>
+            <strong>Try this to see the bugs:</strong>
           </p>
           <ol className="text-sm text-red-800 list-decimal list-inside space-y-1">
+            <li>Check the checkbox on Task 1</li>
             <li>Type different text in each input field</li>
-            <li>Delete the first item (Task 1)</li>
-            <li>Notice how the input values "shift up" incorrectly!</li>
+            <li>Delete Task 1</li>
+            <li>🐞 BUG: Notice how the checkbox and input values "shift up" incorrectly!</li>
           </ol>
           <p className="text-sm text-red-800 mt-2">
             <strong>What happens:</strong> When you delete Task 1, Task 2 moves to index 0.
             React sees "key=0 still exists" and reuses that component instance, preserving
-            the old input value from Task 1!
+            the old state (checkbox and input) from Task 1!
           </p>
         </div>
 
@@ -83,14 +91,27 @@ const BadImplementation = () => {
             // ❌ BAD: Using index as key
             <div
               key={index}
-              className={`${item.color} border-2 border-red-300 rounded-lg p-4 flex items-center gap-4`}
+              className={`${item.color} border-2 ${
+                item.completed ? 'border-green-500' : 'border-red-300'
+              } rounded-lg p-4 flex items-center gap-4 transition-all`}
             >
+              <input
+                type="checkbox"
+                checked={item.completed}
+                onChange={() => toggleComplete(index)}
+                className="w-5 h-5 rounded"
+              />
+
               <div className="flex-shrink-0 w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center font-bold">
                 {index + 1}
               </div>
 
               <div className="flex-1">
-                <div className="font-semibold text-gray-800 mb-2">{item.text}</div>
+                <div className={`font-semibold text-gray-800 mb-2 ${
+                  item.completed ? 'line-through opacity-60' : ''
+                }`}>
+                  {item.text}
+                </div>
                 <input
                   type="text"
                   placeholder="Type something here..."
@@ -127,9 +148,9 @@ const BadImplementation = () => {
 // ✅ GOOD: Using unique ID as key
 const GoodImplementation = () => {
   const [items, setItems] = useState([
-    { id: 1, text: 'Task 1', color: 'bg-red-100' },
-    { id: 2, text: 'Task 2', color: 'bg-blue-100' },
-    { id: 3, text: 'Task 3', color: 'bg-green-100' },
+    { id: 1, text: 'Task 1', color: 'bg-red-100', completed: false },
+    { id: 2, text: 'Task 2', color: 'bg-blue-100', completed: false },
+    { id: 3, text: 'Task 3', color: 'bg-green-100', completed: false },
   ]);
 
   const [inputValues, setInputValues] = useState({});
@@ -152,12 +173,26 @@ const GoodImplementation = () => {
       color: ['bg-red-100', 'bg-blue-100', 'bg-green-100', 'bg-yellow-100'][
         Math.floor(Math.random() * 4)
       ],
+      completed: false,
+    };
+    setItems(prev => [...prev, newItem]);
+  };
+      text: `Task ${newId}`,
+      color: ['bg-red-100', 'bg-blue-100', 'bg-green-100', 'bg-yellow-100'][
+        Math.floor(Math.random() * 4)
+      ],
     };
     setItems(prev => [...prev, newItem]);
   };
 
   const handleInputChange = (id, value) => {
     setInputValues(prev => ({ ...prev, [id]: value }));
+  };
+
+  const toggleComplete = (id) => {
+    setItems(prev => prev.map(item => 
+      item.id === id ? { ...item, completed: !item.completed } : item
+    ));
   };
 
   return (
@@ -204,14 +239,27 @@ const GoodImplementation = () => {
             // ✅ GOOD: Using unique ID as key
             <div
               key={item.id}
-              className={`${item.color} border-2 border-green-300 rounded-lg p-4 flex items-center gap-4`}
+              className={`${item.color} border-2 ${
+                item.completed ? 'border-green-500' : 'border-green-300'
+              } rounded-lg p-4 flex items-center gap-4 transition-all`}
             >
+              <input
+                type="checkbox"
+                checked={item.completed}
+                onChange={() => toggleComplete(item.id)}
+                className="w-5 h-5 rounded"
+              />
+
               <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
                 {index + 1}
               </div>
 
               <div className="flex-1">
-                <div className="font-semibold text-gray-800 mb-2">{item.text}</div>
+                <div className={`font-semibold text-gray-800 mb-2 ${
+                  item.completed ? 'line-through opacity-60' : ''
+                }`}>
+                  {item.text}
+                </div>
                 <input
                   type="text"
                   placeholder="Type something here..."
